@@ -16,7 +16,17 @@ class Bot(commands.Bot):
 	@commands.command()
 	async def hello(self, ctx: commands.Context):
 		# Basic hello world command, executed with "!hello". Reply hello to whoever made the command
-		await ctx.send(f"Hello {ctx.author.name}!")
+		response = f"Hello {ctx.author.name}! "
+		if ctx.author.is_broadcaster:
+			response += "👑"
+		else:
+			if ctx.author.is_mod:
+				response += "⚔"
+			elif ctx.author.is_vip:
+				reponse += "💎"
+			if ctx.author.is_subscriber:
+				response += "🤑"
+		await ctx.send(response.strip())
 
 
 def main():
