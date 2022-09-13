@@ -68,6 +68,29 @@ class Bot(commands.Bot):
 		self.custom_commands[command_name] = command_text
 		await ctx.send(f"Adding command: \"{PREFIX}{command_name}\" -> \"{command_text}\"")
 
+	@commands.command()
+	async def removecommand(self, ctx: commands.Context):
+		if not ctx.author.is_mod:
+			await ctx.send("lmao nice try ur not a mod")
+			return
+
+		args = ctx.message.content.split(" ", 1)
+		if len(args) < 2:
+			await ctx.send("lmao wut command")
+			return
+
+		command_name = args[1]
+		if self.get_command(command_name) is not None:
+			await ctx.send("lmao u cant delet this")
+			return
+
+		if command_name not in self.custom_commands:
+			await ctx.send("lmao wut is that command")
+			return
+
+		del self.custom_commands[command_name]
+		await ctx.send(f"Deleted command \"{PREFIX}{command_name}\"")
+
 
 def main():
 	load_dotenv()
