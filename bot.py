@@ -91,6 +91,15 @@ class Bot(commands.Bot):
 		del self.custom_commands[command_name]
 		await ctx.send(f"Deleted command \"{PREFIX}{command_name}\"")
 
+	@commands.command()
+	async def help(self, ctx: commands.Context):
+		message = "Available commands:"
+		for command in self.commands:
+			message += f" {PREFIX}{command}"
+		for command in self.custom_commands.keys():
+			message += f" {PREFIX}{command}"
+		await ctx.send(message)
+
 
 def main():
 	load_dotenv()
