@@ -4,10 +4,12 @@ import os
 from twitchio.ext import commands
 from dotenv import load_dotenv
 
+PREFIX = "!"
+
 
 class Bot(commands.Bot):
 	def __init__(self):
-		super().__init__(token = os.environ["TMI_TOKEN"], prefix="!", initial_channels=[os.environ["CHANNEL"]])
+		super().__init__(token = os.environ["TMI_TOKEN"], prefix=PREFIX, initial_channels=[os.environ["CHANNEL"]])
 		self.custom_commands = {}
 
 	async def event_ready(self):
@@ -21,7 +23,7 @@ class Bot(commands.Bot):
 		# I really want to do this with the add_command function and have no need for this event_message override, but
 		# I cannot for the life of me figure out how to make "anonymous" coroutines (like, async lambda or something),
 		# so I'm just manually handling the command here before passing to the command handler
-		if message.content[0] == "!":
+		if message.content[0] == PREFIX:
 			first_token = message.content.split()[0][1:]
 			if first_token in self.custom_commands:
 				await message.channel.send(self.custom_commands[first_token])
@@ -64,7 +66,7 @@ class Bot(commands.Bot):
 			return
 
 		self.custom_commands[command_name] = command_text
-		await ctx.send(f"Adding command: \"!{command_name}\" -> \"{command_text}\"")
+		await ctx.send(f"Adding command: \"{PREFIX}{command_name}\" -> \"{command_text}\"")
 
 
 def main():
