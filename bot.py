@@ -8,10 +8,26 @@ from dotenv import load_dotenv
 class Bot(commands.Bot):
 	def __init__(self):
 		super().__init__(token = os.environ["TMI_TOKEN"], prefix="!", initial_channels=[os.environ["CHANNEL"]])
+		self.custom_commands = {}
 
 	async def event_ready(self):
 		print(f"Logged in as | {self.nick}")
 		print(f"User id is | {self.user_id}")
+
+	async def event_message(self, message):
+		if message.echo:
+			return
+
+		# I really want to do this with the add_command function and have no need for this event_message override, but
+		# I cannot for the life of me figure out how to make "anonymous" coroutines (like, async lambda or something),
+		# so I'm just manually handling the command here before passing to the command handler
+		if message.content[0] == "!":
+			first_token = message.content.split()[0][1:]
+			if first_token in self.custom_commands:
+				await message.channel.send(self.custom_commands[first_token])
+				return
+
+		await self.handle_commands(message)
 
 	@commands.command()
 	async def hello(self, ctx: commands.Context):
@@ -27,6 +43,28 @@ class Bot(commands.Bot):
 			if ctx.author.is_subscriber:
 				response += "🤑"
 		await ctx.send(response.strip())
+
+	@commands.command()
+	async def addcommand(self, ctx: commands.Context):
+		# Lets moderators add custom text responses
+		if not ctx.author.is_mod:
+			await ctx.send("lmao nice try ur not a mod")
+			return
+		# Not sure if ctx.args is supposed to work but it seems like it doesn't...
+		# I want the last arg to not get split anyway, so I do it myself
+		args = ctx.message.content.split(" ", 2)
+		if len(args) < 3:
+			await ctx.send("lmao plz supply 3 args")
+			return
+		command_name = args[1]
+		command_text = args[2]
+
+		if command_name in self.custom_commands or self.get_command(command_name) is not None:
+			await ctx.send("lmao that command already exists")
+			return
+
+		self.custom_commands[command_name] = command_text
+		await ctx.send(f"Adding command: \"!{command_name}\" -> \"{command_text}\"")
 
 
 def main():
