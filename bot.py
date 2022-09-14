@@ -38,8 +38,8 @@ class Bot(commands.Bot):
 		# I really want to do this with the add_command function and have no need for this event_message override, but
 		# I cannot for the life of me figure out how to make "anonymous" coroutines (like, async lambda or something),
 		# so I'm just manually handling the command here before passing to the command handler
-		if message.content[0] == PREFIX:
-			first_token = message.content.split()[0][1:]
+		if message.content.startswith(PREFIX):
+			first_token = message.content[len(PREFIX):].strip().split()[0]
 			if first_token in self.custom_commands:
 				await message.channel.send(self.custom_commands[first_token])
 				return
