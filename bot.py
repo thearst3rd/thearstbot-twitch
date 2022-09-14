@@ -16,13 +16,11 @@ class Bot(commands.Bot):
 		self.db_cur = self.db_con.cursor()
 
 		if self.db_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='custom_commands'").fetchone() == None:
-			print("Created database table")
 			self.db_cur.execute("CREATE TABLE custom_commands(command, output_text)")
-
-		commands = self.db_cur.execute("SELECT * FROM custom_commands").fetchall()
-		if len(commands) > 0:
-			print("Loaded custom commands:")
-			print(commands)
+			print("Created database table")
+		else:
+			commands = self.db_cur.execute("SELECT * FROM custom_commands").fetchall()
+			print(f"{len(commands)} custom commands available")
 
 	async def event_ready(self):
 		print(f"Logged in as | {self.nick}")
