@@ -12,7 +12,6 @@ DB_PATH = "storage.db"
 class Bot(commands.Bot):
 	def __init__(self):
 		super().__init__(token = os.environ["TMI_TOKEN"], prefix=PREFIX, initial_channels=[os.environ["CHANNEL"]])
-		self.custom_commands = {}
 		self.db_con = sqlite3.connect(DB_PATH)
 		self.db_cur = self.db_con.cursor()
 
@@ -21,11 +20,9 @@ class Bot(commands.Bot):
 			self.db_cur.execute("CREATE TABLE custom_commands(command, output_text)")
 
 		commands = self.db_cur.execute("SELECT * FROM custom_commands").fetchall()
-		for command in commands:
-			self.custom_commands[command[0]] = command[1]
-		if len(self.custom_commands) > 0:
+		if len(commands) > 0:
 			print("Loaded custom commands:")
-			print(self.custom_commands)
+			print(commands)
 
 	async def event_ready(self):
 		print(f"Logged in as | {self.nick}")
@@ -40,8 +37,9 @@ class Bot(commands.Bot):
 		# so I'm just manually handling the command here before passing to the command handler
 		if message.content.startswith(PREFIX):
 			first_token = message.content[len(PREFIX):].strip().split()[0]
-			if first_token in self.custom_commands:
-				await message.channel.send(self.custom_commands[first_token])
+			res = self.db_cur.execute("SELECT output_text FROM custom_commands WHERE command=?", [first_token]).fetchone()
+			if res is not None:
+				await message.channel.send(res[0])
 				return
 
 		await self.handle_commands(message)
@@ -76,11 +74,11 @@ class Bot(commands.Bot):
 		command_name = args[1]
 		command_text = args[2]
 
-		if command_name in self.custom_commands or self.get_command(command_name) is not None:
+		if self.db_cur.execute("SELECT * FROM custom_commands WHERE command=?", [command_name]).fetchone() is not None \
+					or self.get_command(command_name) is not None:
 			await ctx.send("lmao that command already exists")
 			return
 
-		self.custom_commands[command_name] = command_text
 		self.db_cur.execute("INSERT INTO custom_commands VALUES (?, ?)", [command_name, command_text])
 		self.db_con.commit()
 		await ctx.send(f"Adding command: \"{PREFIX}{command_name}\" -> \"{command_text}\"")
@@ -101,11 +99,10 @@ class Bot(commands.Bot):
 			await ctx.send("lmao u cant delet this")
 			return
 
-		if command_name not in self.custom_commands:
+		if self.db_cur.execute("SELECT * FROM custom_commands WHERE command=?", [command_name]).fetchone() is None:
 			await ctx.send("lmao wut is that command")
 			return
 
-		del self.custom_commands[command_name]
 		self.db_cur.execute("DELETE FROM custom_commands WHERE command=?", [command_name])
 		self.db_con.commit()
 		await ctx.send(f"Deleted command \"{PREFIX}{command_name}\"")
@@ -115,8 +112,8 @@ class Bot(commands.Bot):
 		message = "Available commands:"
 		for command in self.commands:
 			message += f" {PREFIX}{command}"
-		for command in self.custom_commands.keys():
-			message += f" {PREFIX}{command}"
+		for command in self.db_cur.execute("SELECT command FROM custom_commands").fetchall():
+			message += f" {PREFIX}{command[0]}"
 		await ctx.send(message)
 
 
