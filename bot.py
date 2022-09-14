@@ -1,16 +1,31 @@
 # Basic twitch bot
 
 import os
+import sqlite3
 from twitchio.ext import commands
 from dotenv import load_dotenv
 
 PREFIX = "!"
+DB_PATH = "storage.db"
 
 
 class Bot(commands.Bot):
 	def __init__(self):
 		super().__init__(token = os.environ["TMI_TOKEN"], prefix=PREFIX, initial_channels=[os.environ["CHANNEL"]])
 		self.custom_commands = {}
+		self.db_con = sqlite3.connect(DB_PATH)
+		self.db_cur = self.db_con.cursor()
+
+		if self.db_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='custom_commands'").fetchone() == None:
+			print("Created database table")
+			self.db_cur.execute("CREATE TABLE custom_commands(command, output_text)")
+
+		commands = self.db_cur.execute("SELECT * FROM custom_commands").fetchall()
+		for command in commands:
+			self.custom_commands[command[0]] = command[1]
+		if len(self.custom_commands) > 0:
+			print("Loaded custom commands:")
+			print(self.custom_commands)
 
 	async def event_ready(self):
 		print(f"Logged in as | {self.nick}")
@@ -66,6 +81,8 @@ class Bot(commands.Bot):
 			return
 
 		self.custom_commands[command_name] = command_text
+		self.db_cur.execute("INSERT INTO custom_commands VALUES (?, ?)", [command_name, command_text])
+		self.db_con.commit()
 		await ctx.send(f"Adding command: \"{PREFIX}{command_name}\" -> \"{command_text}\"")
 
 	@commands.command()
@@ -89,6 +106,8 @@ class Bot(commands.Bot):
 			return
 
 		del self.custom_commands[command_name]
+		self.db_cur.execute("DELETE FROM custom_commands WHERE command=?", [command_name])
+		self.db_con.commit()
 		await ctx.send(f"Deleted command \"{PREFIX}{command_name}\"")
 
 	@commands.command()
