@@ -51,8 +51,9 @@ class Bot(commands.Bot):
 		else:
 			if ctx.author.is_mod:
 				response += "⚔"
-			elif ctx.author.is_vip:
-				reponse += "💎"
+			# Uncomment these once twitchio gets a new release
+			#elif ctx.author.is_vip:
+			#	response += "💎"
 			if ctx.author.is_subscriber:
 				response += "🤑"
 		await ctx.send(response.strip())
