@@ -15,12 +15,10 @@ class Bot(commands.Bot):
 		self.db_con = sqlite3.connect(DB_PATH)
 		self.db_cur = self.db_con.cursor()
 
-		if self.db_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='custom_commands'").fetchone() == None:
-			self.db_cur.execute("CREATE TABLE custom_commands(command, output_text)")
-			print("Created database table")
-		else:
-			commands = self.db_cur.execute("SELECT * FROM custom_commands").fetchall()
-			print(f"{len(commands)} custom commands available")
+		self.db_cur.execute("CREATE TABLE IF NOT EXISTS custom_commands(command TEXT, output_text TEXT, author TEXT)")
+		print("Created database table")
+		commands = self.db_cur.execute("SELECT count(*) FROM custom_commands").fetchone()
+		print(f"{commands[0]} custom commands available")
 
 	async def event_ready(self):
 		print(f"Logged in as | {self.nick}")
@@ -82,7 +80,7 @@ class Bot(commands.Bot):
 			await ctx.send("lmao that command already exists")
 			return
 
-		self.db_cur.execute("INSERT INTO custom_commands VALUES (?, ?)", [command_name, command_text])
+		self.db_cur.execute("INSERT INTO custom_commands VALUES (?, ?, ?)", [command_name, command_text, ctx.author.name])
 		self.db_con.commit()
 		await ctx.send(f"Adding command: \"{PREFIX}{command_name}\" -> \"{command_text}\"")
 
