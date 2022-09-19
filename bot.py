@@ -114,7 +114,8 @@ class Bot(commands.Bot):
 	async def help(self, ctx: commands.Context):
 		message = "Available commands:"
 		for command in self.commands:
-			message += f" {PREFIX}{command}"
+			if command not in ["addcmd", "removecmd"] or ctx.author.is_mod:
+				message += f" {PREFIX}{command}"
 		for command in self.db_cur.execute("SELECT command FROM custom_commands").fetchall():
 			message += f" {PREFIX}{command[0]}"
 		await ctx.send(message)
