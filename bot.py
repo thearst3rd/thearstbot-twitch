@@ -73,6 +73,10 @@ class Bot(commands.Bot):
 		command_name = args[1]
 		command_text = args[2]
 
+		if not command_name.isalnum():
+			await ctx.send("lmao that command name is too funky")
+			return
+
 		if self.db_cur.execute("SELECT * FROM custom_commands WHERE command=?", [command_name]).fetchone() is not None \
 					or self.get_command(command_name) is not None:
 			await ctx.send("lmao that command already exists")
