@@ -59,7 +59,7 @@ class Bot(commands.Bot):
 		await ctx.send(response.strip())
 
 	@commands.command()
-	async def addcommand(self, ctx: commands.Context):
+	async def addcmd(self, ctx: commands.Context):
 		# Lets moderators add custom text responses
 		if not ctx.author.is_mod:
 			await ctx.send("lmao nice try ur not a mod")
@@ -83,7 +83,7 @@ class Bot(commands.Bot):
 		await ctx.send(f"Adding command: \"{PREFIX}{command_name}\" -> \"{command_text}\"")
 
 	@commands.command()
-	async def removecommand(self, ctx: commands.Context):
+	async def removecmd(self, ctx: commands.Context):
 		if not ctx.author.is_mod:
 			await ctx.send("lmao nice try ur not a mod")
 			return
