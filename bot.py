@@ -3,6 +3,7 @@
 import os
 import sqlite3
 from twitchio.ext import commands
+from twitchio.ext import pubsub
 from dotenv import load_dotenv
 
 PREFIX = "!"
@@ -20,9 +21,54 @@ class Bot(commands.Bot):
 		commands = self.db_cur.execute("SELECT count(*) FROM custom_commands").fetchone()
 		print(f"{commands[0]} custom commands available")
 
+	# Adds a custom command from a string
+	async def add_custom_command(self, ctx, command_str, author):
+		args = command_str.split(" ", 1)
+		if len(args) < 2:
+			await ctx.send("lmao plz supply 2 args")
+			return
+		command_name = args[0]
+		command_text = args[1]
+
+		if not command_name.isalnum():
+			await ctx.send("lmao that command name is too funky")
+			return
+
+		if self.db_cur.execute("SELECT * FROM custom_commands WHERE command=?", [command_name]).fetchone() is not None \
+					or self.get_command(command_name) is not None:
+			await ctx.send("lmao that command already exists")
+			return
+
+		self.db_cur.execute("INSERT INTO custom_commands VALUES (?, ?, ?)", [command_name, command_text, author])
+		self.db_con.commit()
+		await ctx.send(f"Adding command: \"{PREFIX}{command_name}\" -> \"{command_text}\"")
+
 	async def event_ready(self):
 		print(f"Logged in as | {self.nick}")
 		print(f"User id is | {self.user_id}")
+
+		# This entire pubsub thing feels so janky... There simply must be a better way to do it
+		if "PUBSUB_TOKEN" in os.environ and "PUBSUB_USER_ID" in os.environ:
+			self.pubsub = pubsub.PubSubPool(self)
+			topics = [
+				pubsub.channel_points(os.environ["PUBSUB_TOKEN"])[int(os.environ["PUBSUB_USER_ID"])]
+			]
+			await self.pubsub.subscribe_topics(topics)
+
+			# Can I put this function somewhere else LMAO
+			@self.event()
+			async def event_pubsub_channel_points(event: pubsub.PubSubChannelPointsMessage):
+				reward = event.reward.title
+				channel = self.get_channel(os.environ["CHANNEL"])
+				if reward == "nice":
+					await channel.send(f"@{event.user.name} nice")
+				elif reward == "very nice":
+					await channel.send(f"@{event.user.name} very nice")
+				elif reward == "Add a custom command to my bot!":
+					await channel.send(f"{event.user.name} redeemed a custom command!")
+					await self.add_custom_command(channel, event.input, event.user.name)
+				else:
+					await channel.send(f"{event.user.name} redeemed {event.input}!")
 
 	async def event_message(self, message):
 		if message.echo:
@@ -64,25 +110,11 @@ class Bot(commands.Bot):
 			return
 		# Not sure if ctx.args is supposed to work but it seems like it doesn't...
 		# I want the last arg to not get split anyway, so I do it myself
-		args = ctx.message.content.split(" ", 2)
-		if len(args) < 3:
-			await ctx.send("lmao plz supply 3 args")
+		args = ctx.message.content.split(" ", 1)
+		if len(args) < 2:
+			await ctx.send("lmao plz supply 2 args")
 			return
-		command_name = args[1]
-		command_text = args[2]
-
-		if not command_name.isalnum():
-			await ctx.send("lmao that command name is too funky")
-			return
-
-		if self.db_cur.execute("SELECT * FROM custom_commands WHERE command=?", [command_name]).fetchone() is not None \
-					or self.get_command(command_name) is not None:
-			await ctx.send("lmao that command already exists")
-			return
-
-		self.db_cur.execute("INSERT INTO custom_commands VALUES (?, ?, ?)", [command_name, command_text, ctx.author.name])
-		self.db_con.commit()
-		await ctx.send(f"Adding command: \"{PREFIX}{command_name}\" -> \"{command_text}\"")
+		await self.add_custom_command(ctx, args[1], ctx.author.name)
 
 	@commands.command()
 	async def removecmd(self, ctx: commands.Context):
