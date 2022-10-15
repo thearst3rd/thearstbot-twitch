@@ -17,6 +17,7 @@ class Bot(commands.Bot):
 		self.db_cur = self.db_con.cursor()
 
 		self.db_cur.execute("CREATE TABLE IF NOT EXISTS custom_commands(command TEXT, output_text TEXT, author TEXT)")
+		self.db_cur.execute("CREATE TABLE IF NOT EXISTS channel_reward_messages(title TEXT, output_text TEXT)")
 		print("Created database table")
 		commands = self.db_cur.execute("SELECT count(*) FROM custom_commands").fetchone()
 		print(f"{commands[0]} custom commands available")
@@ -58,17 +59,14 @@ class Bot(commands.Bot):
 			# Can I put this function somewhere else LMAO
 			@self.event()
 			async def event_pubsub_channel_points(event: pubsub.PubSubChannelPointsMessage):
-				reward = event.reward.title
-				channel = self.get_channel(os.environ["CHANNEL"])
-				if reward == "nice":
-					await channel.send(f"@{event.user.name} nice")
-				elif reward == "very nice":
-					await channel.send(f"@{event.user.name} very nice")
-				elif reward == "Add a custom command to my bot!":
-					await channel.send(f"{event.user.name} redeemed a custom command!")
-					await self.add_custom_command(channel, event.input, event.user.name)
-				else:
-					await channel.send(f"{event.user.name} redeemed {event.input}!")
+				reward_title = event.reward.title
+				result = self.db_cur.execute("SELECT output_text FROM channel_reward_messages WHERE title=?", [reward_title]).fetchone()
+				if result is not None:
+					message = result[0]
+					message = message.replace("%USER%", event.user.name)
+					if event.input:
+						message = message.replace("%INPUT%", event.input)
+					await self.get_channel(os.environ["CHANNEL"]).send(message)
 
 	async def event_message(self, message):
 		if message.echo:
