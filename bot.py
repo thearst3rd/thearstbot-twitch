@@ -1,6 +1,7 @@
 # Basic twitch bot
 
 import os
+import random
 import sqlite3
 from twitchio.ext import commands
 from twitchio.ext import pubsub
@@ -147,6 +148,12 @@ class Bot(commands.Bot):
 		for command in self.db_cur.execute("SELECT command FROM custom_commands").fetchall():
 			message += f" {PREFIX}{command[0]}"
 		await ctx.send(message)
+
+	@commands.command()
+	async def balls(self, ctx: commands.Context):
+		word_list = "cubes are just balls with corners lmao".split(" ")
+		random.shuffle(word_list)
+		await ctx.send(" ".join(word_list))
 
 
 def main():
